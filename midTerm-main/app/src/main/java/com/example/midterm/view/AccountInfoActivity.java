@@ -21,8 +21,10 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.bumptech.glide.Glide;
 import com.example.midterm.R;
-import com.example.midterm.model.entity.User; // Import User mới
+import com.example.midterm.model.entity.Account;
+import com.example.midterm.model.entity.UserProfile;
 import com.example.midterm.viewModel.AccountViewModel;
+import com.example.midterm.viewModel.UserProfileViewModel;
 import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.Calendar;
@@ -38,12 +40,9 @@ public class AccountInfoActivity extends AppCompatActivity {
     private RadioButton rbMale, rbFemale, rbOther;
     private Button btnSaveProfile;
     private ImageButton btnBack;
-
-    // Chỉ cần 1 ViewModel
+    private UserProfileViewModel userProfileViewModel;
     private AccountViewModel accountViewModel;
-
-    // Biến lưu user hiện tại
-    private User currentUser;
+    private int userId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,22 +52,84 @@ public class AccountInfoActivity extends AppCompatActivity {
 
         initViews();
 
-        // Khởi tạo ViewModel
+        // Lấy userId từ Intent
+        userId = getIntent().getIntExtra("user_id", -1);
+
+        userProfileViewModel = new ViewModelProvider(this).get(UserProfileViewModel.class);
         accountViewModel = new ViewModelProvider(this).get(AccountViewModel.class);
 
-        // Lấy thông tin User hiện tại (từ ViewModel đã load khi đăng nhập)
-        // Hoặc load lại từ DB nếu cần thiết
-        accountViewModel.getUser().observe(this, user -> {
-            if (user != null) {
-                this.currentUser = user;
-                displayUserInfo(user);
+        // Quan sát LiveData từ ViewModel
+        userProfileViewModel.getUserLiveData().observe(this, this::displayUserInfo);
+
+        // Load dữ liệu user từ Room
+        if (userId != -1) {
+            userProfileViewModel.loadUserById(userId);
+        }
+
+        etDOB.setOnClickListener(v -> showDatePicker(etDOB));
+        btnBack.setOnClickListener(v -> finish());
+        imgEditAvatar.setOnClickListener(v -> openImagePicker());
+
+        btnSaveProfile.setOnClickListener(v -> {
+            UserProfile current = userProfileViewModel.getUserLiveData().getValue();
+            if (current == null) return;
+
+            String newFullName = etFullname.getText().toString().trim();
+            String newDOB = etDOB.getText().toString().trim();
+            String newGender = getSelectedGender();
+            String newAvatar = selectedImageUri != null ? selectedImageUri.toString() : current.getAvatar();
+            String newEmail = etEmail.getText().toString().trim();
+            String newPhone = etPhone.getText().toString().trim();
+
+            // Kiểm tra UserProfile có thay đổi không
+            boolean isProfileChanged = !newFullName.equals(current.getFullName()) ||
+                    !newDOB.equals(current.getDateOfBirth()) ||
+                    !newGender.equals(current.getSex()) ||
+                    !newAvatar.equals(current.getAvatar());
+
+            Account currentAccount = accountViewModel.getAccountById(current.getUserId()).getValue();
+            if (currentAccount == null) {
+                Toast.makeText(this, "Đang tải dữ liệu, thử lại sau", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            boolean isEmailChanged = !newEmail.equals(currentAccount.getEmail());
+            boolean isPhoneChanged = !newPhone.equals(currentAccount.getPhone());
+            boolean isAccountChanged = isEmailChanged || isPhoneChanged;
+
+            if (!isProfileChanged && !isAccountChanged) {
+                Toast.makeText(this, "Không có thay đổi nào", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // Nếu email/phone thay đổi mới validate
+            if (isEmailChanged && !newEmail.isEmpty() && !isValidEmail(newEmail)) {
+                etEmail.setError("Email không hợp lệ");
+                etEmail.requestFocus();
+                return;
+            }
+
+            if (isPhoneChanged && !newPhone.isEmpty() && !isValidPhone(newPhone)) {
+                etPhone.setError("Số điện thoại không hợp lệ");
+                etPhone.requestFocus();
+                return;
+            }
+
+            // Kiểm tra tồn tại nếu có thay đổi
+            if (isAccountChanged) {
+                accountViewModel.checkEmailOrPhoneExist(newEmail, newPhone, current.getUserId(), (Boolean exist) -> runOnUiThread(() -> {
+                    if (exist) {
+                        Toast.makeText(this, "Email hoặc số điện thoại đã tồn tại", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    updateProfileAndAccount(current, newFullName, newDOB, newGender, newAvatar, newEmail, newPhone);
+                }));
+            } else {
+                // Chỉ update UserProfile
+                updateProfileAndAccount(current, newFullName, newDOB, newGender, newAvatar, newEmail, newPhone);
             }
         });
 
-        // Setup các sự kiện click
-        setupEvents();
-
-        // Xử lý giao diện EdgeToEdge
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
@@ -90,25 +151,21 @@ public class AccountInfoActivity extends AppCompatActivity {
         btnBack = findViewById(R.id.btn_back);
     }
 
-    private void setupEvents() {
-        etDOB.setOnClickListener(v -> showDatePicker(etDOB));
-        btnBack.setOnClickListener(v -> finish());
-        imgEditAvatar.setOnClickListener(v -> openImagePicker());
+    private void updateProfileAndAccount(UserProfile current, String fullName, String dob, String gender, String avatar, String email, String phone) {
+        UserProfile updatedProfile = new UserProfile(current.getUserId(), fullName, dob, gender, avatar);
 
-        // Xử lý nút Lưu
-        btnSaveProfile.setOnClickListener(v -> handleSaveProfile());
+        userProfileViewModel.update(updatedProfile, message ->
+                runOnUiThread(() -> Toast.makeText(this, message, Toast.LENGTH_SHORT).show())
+        );
+        accountViewModel.updateEmailOrPhone(current.getUserId(), email, phone, null);
     }
+    private void displayUserInfo(UserProfile profile) {
+        if (profile == null) return;
 
-    private void displayUserInfo(User user) {
-        // Hiển thị tất cả thông tin từ đối tượng User duy nhất
-        etFullname.setText(user.fullName);
-        etEmail.setText(user.email);
-        etPhone.setText(user.phoneNumber);
-        etDOB.setText(user.dob); // Đảm bảo User.java đã có trường dob
+        etFullname.setText(profile.getFullName());
+        etDOB.setText(profile.getDateOfBirth());
 
-        // Xử lý giới tính
-        String gender = user.gender != null ? user.gender : "Khác";
-        switch (gender) {
+        switch (profile.getSex()) {
             case "Nam":
                 rbMale.setChecked(true);
                 break;
@@ -120,11 +177,10 @@ public class AccountInfoActivity extends AppCompatActivity {
                 break;
         }
 
-        // Xử lý ảnh đại diện
-        String avatar = user.avatarUrl; // Đảm bảo User.java đã có trường avatarUrl
+        String avatar = profile.getAvatar();
         if (avatar != null && !avatar.isEmpty()) {
             Glide.with(this)
-                    .load(Uri.parse(avatar))
+                    .load(Uri.parse(avatar)) // parse content Uri từ String
                     .placeholder(R.drawable.catlogo_removebg_preview)
                     .into(imgAvatar);
         } else {
@@ -132,68 +188,21 @@ public class AccountInfoActivity extends AppCompatActivity {
                     .load(R.drawable.catlogo_removebg_preview)
                     .into(imgAvatar);
         }
+        // Hiển thị email/phone từ AccountViewModel
+        accountViewModel.getAccountById(profile.getUserId()).observe(this, account -> {
+            if (account != null) {
+                etEmail.setText(account.getEmail());
+                etPhone.setText(account.getPhone());
+            }
+        });
     }
-
-    private void handleSaveProfile() {
-        if (currentUser == null) return;
-
-        // 1. Lấy dữ liệu từ giao diện
-        String newFullName = etFullname.getText().toString().trim();
-        String newEmail = etEmail.getText().toString().trim();
-        String newPhone = etPhone.getText().toString().trim();
-        String newDOB = etDOB.getText().toString().trim();
-        String newGender = getSelectedGender();
-        String newAvatar = selectedImageUri != null ? selectedImageUri.toString() : currentUser.avatarUrl;
-
-        // 2. Validate cơ bản
-        if (newEmail.isEmpty() || !android.util.Patterns.EMAIL_ADDRESS.matcher(newEmail).matches()) {
-            etEmail.setError("Email không hợp lệ");
-            etEmail.requestFocus();
-            return;
-        }
-        if (!newPhone.isEmpty() && !newPhone.matches("^(\\+84|0)[0-9]{9,10}$")) {
-            etPhone.setError("Số điện thoại không hợp lệ");
-            etPhone.requestFocus();
-            return;
-        }
-
-        // 3. Kiểm tra xem có thay đổi gì không
-        boolean isChanged = !newFullName.equals(currentUser.fullName) ||
-                !newEmail.equals(currentUser.email) ||
-                !newPhone.equals(currentUser.phoneNumber) ||
-                !newDOB.equals(currentUser.dob) ||
-                !newGender.equals(currentUser.gender) ||
-                !newAvatar.equals(currentUser.avatarUrl);
-
-        if (!isChanged) {
-            Toast.makeText(this, "Không có thay đổi nào", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        // 4. Cập nhật vào đối tượng User hiện tại
-        currentUser.fullName = newFullName;
-        currentUser.email = newEmail;
-        currentUser.phoneNumber = newPhone;
-        currentUser.dob = newDOB;
-        currentUser.gender = newGender;
-        currentUser.avatarUrl = newAvatar;
-
-        // 5. Gọi ViewModel để lưu xuống DB (Chỉ cần 1 hàm update)
-        // Lưu ý: Cần thêm hàm updateUser vào AccountViewModel nếu chưa có
-        accountViewModel.updateUser(currentUser);
-        Toast.makeText(this, "Cập nhật thành công!", Toast.LENGTH_SHORT).show();
-
-        // Tùy chọn: Kết thúc màn hình sau khi lưu
-        // finish();
-    }
-
-    // --- CÁC HÀM TIỆN ÍCH GIỮ NGUYÊN ---
 
     private final ActivityResultLauncher<Intent> imagePickerLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
                 if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                     selectedImageUri = result.getData().getData();
                     if (selectedImageUri != null) {
+                        // Glide load từ content Uri
                         Glide.with(this)
                                 .load(selectedImageUri)
                                 .placeholder(R.drawable.catlogo_removebg_preview)
@@ -201,6 +210,14 @@ public class AccountInfoActivity extends AppCompatActivity {
                     }
                 }
             });
+
+    private boolean isValidEmail(String email) {
+        return email != null && !email.isEmpty() && android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches();
+    }
+
+    private boolean isValidPhone(String phone) {
+        return phone != null && !phone.isEmpty() && phone.matches("^(\\+84|0)[0-9]{9,10}$");
+    }
 
     private void openImagePicker() {
         Intent intent = new Intent(Intent.ACTION_PICK);

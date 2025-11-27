@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.midterm.R;
 import com.example.midterm.view.Adapter.EventAdapter;
+import com.example.midterm.view.CreateEvent;
 import com.example.midterm.view.ViewEventDetailsOrganizer;
 import com.example.midterm.viewModel.EventViewModel;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;

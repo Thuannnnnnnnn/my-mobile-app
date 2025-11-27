@@ -7,6 +7,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Patterns;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
@@ -20,7 +21,10 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.midterm.R;
+import com.example.midterm.model.entity.Organizer;
 import com.example.midterm.viewModel.AccountViewModel;
+import com.example.midterm.viewModel.OrganizerViewModel;
+import com.example.midterm.viewModel.UserProfileViewModel;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 

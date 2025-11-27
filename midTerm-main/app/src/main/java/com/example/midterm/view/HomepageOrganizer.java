@@ -19,6 +19,7 @@ import com.example.midterm.view.fragment.OrganizerAnalyticsFragment;
 import com.example.midterm.view.fragment.OrganizerDashboardFragment;
 import com.example.midterm.view.fragment.OrganizerEventsFragment;
 import com.example.midterm.view.fragment.OrganizerProfileFragment;
+import com.example.midterm.viewModel.OrganizerViewModel;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 

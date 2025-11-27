@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.midterm.R;
 import com.example.midterm.view.Adapter.EventAdapter;
+import com.example.midterm.view.CreateEvent;
 import com.example.midterm.view.EventDashboardActivity;
 import com.example.midterm.view.EventListActivity;
 import com.example.midterm.view.ManageVouchers;

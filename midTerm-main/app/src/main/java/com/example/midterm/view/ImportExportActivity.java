@@ -20,9 +20,11 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.midterm.R;
+import com.example.midterm.model.entity.Guest;
 import com.example.midterm.model.entity.Ticket;
 import com.example.midterm.utils.ExportUtils;
 import com.example.midterm.utils.OTPUtils;
+import com.example.midterm.viewModel.GuestViewModel;
 import com.example.midterm.viewModel.TicketTypeViewModel;
 import com.example.midterm.viewModel.TicketViewModel;
 import com.google.android.material.snackbar.Snackbar;

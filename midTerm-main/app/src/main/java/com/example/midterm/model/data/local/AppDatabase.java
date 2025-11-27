@@ -1,60 +1,94 @@
 package com.example.midterm.model.data.local;
 
 import android.content.Context;
+
+import androidx.annotation.NonNull;
 import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
+import androidx.sqlite.db.SupportSQLiteDatabase;
 
-// Import các DAO
-import com.example.midterm.model.data.local.EventDAO;
-import com.example.midterm.model.data.local.SeatMapDAO; // Thêm import mới
+import java.util.concurrent.Executors;
 
-// Import các Entity
-import com.example.midterm.model.entity.User;
-import com.example.midterm.model.entity.MembershipTier;
-import com.example.midterm.model.entity.Category;
-import com.example.midterm.model.entity.Talent;
+import com.example.midterm.model.entity.Account;
+import com.example.midterm.model.entity.Discount;
 import com.example.midterm.model.entity.Event;
-import com.example.midterm.model.entity.relations.EventTalentCrossRef;
-import com.example.midterm.model.entity.TicketType;
-import com.example.midterm.model.entity.SeatMap;
-import com.example.midterm.model.entity.Seat;
-import com.example.midterm.model.entity.PromoCode;
-import com.example.midterm.model.entity.Order;
-import com.example.midterm.model.entity.Ticket;
-import com.example.midterm.model.entity.EventMedia;
-import com.example.midterm.model.entity.Review;
-import com.example.midterm.model.entity.CheckinLog;
+import com.example.midterm.model.entity.EventSection;
+import com.example.midterm.model.entity.FollowedArtist;
+import com.example.midterm.model.entity.Guest;
 import com.example.midterm.model.entity.Notification;
-
+import com.example.midterm.model.entity.Organizer;
+import com.example.midterm.model.entity.OrganizerVerification;
+import com.example.midterm.model.entity.Review;
+import com.example.midterm.model.entity.Seat;
+import com.example.midterm.model.entity.Ticket;
+import com.example.midterm.model.entity.TicketType;
+import com.example.midterm.model.entity.UserProfile;
+import com.example.midterm.model.entity.relations.EventGuestCrossRef;
 
 @Database(entities = {
-        // Nhóm User
-        User.class, MembershipTier.class, Notification.class,
-        // Nhóm Sự kiện
-        Category.class, Talent.class, Event.class, EventTalentCrossRef.class, EventMedia.class,
-        // Nhóm Vé
-        TicketType.class, SeatMap.class, Seat.class,
-        // Nhóm Giao dịch (MỚI THÊM)
-        PromoCode.class, Order.class, Ticket.class, Review.class, CheckinLog.class
-}, version = 5, exportSchema = false) 
+        TicketType.class,
+        Event.class,
+        EventSection.class,
+        Account.class,
+        Organizer.class,
+        UserProfile.class,
+        Guest.class,
+        EventGuestCrossRef.class,
+        Ticket.class,
+        Seat.class,
+        Notification.class,
+        OrganizerVerification.class,
+        Review.class,
+        FollowedArtist.class,
+        Discount.class
+}, version = 21, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
 
     private static volatile AppDatabase INSTANCE;
-
-    // Khai báo DAO
-    public abstract UserDAO userDAO();
-    public abstract EventDAO eventDAO(); // DAO cho sự kiện
-    public abstract SeatMapDAO seatMapDAO(); // Thêm phương thức cho SeatMapDAO
-
-    public static AppDatabase getDatabase(final Context context) {
+    public abstract TicketTypeDAO ticketTypeDAO();
+    public abstract TicketDAO ticketDAO();
+    public abstract EventDAO eventDAO();
+    public abstract EventSectionDAO eventSectionDAO();
+    public abstract AccountDAO accountDAO();
+    public abstract OrganizerDAO organizerDAO();
+    public abstract UserProfileDAO userProfileDAO();
+    public abstract GuestDAO guestDAO();
+    public abstract SeatDAO seatDAO();
+    public abstract NotificationDAO notificationDAO();
+    public abstract OrganizerVerificationDAO organizerVerificationDAO();
+    public abstract ReviewDAO reviewDAO();
+    public abstract FollowedArtistDAO followedArtistDAO();
+    public abstract DiscountDAO discountDAO();
+    public static AppDatabase getInstance(Context context) {
         if (INSTANCE == null) {
             synchronized (AppDatabase.class) {
                 if (INSTANCE == null) {
-                    INSTANCE = Room.databaseBuilder(context.getApplicationContext(),
-                                        AppDatabase.class, "event_app_database_v2") // Đổi tên DB để tạo mới sạch sẽ
+                    Context appContext = context.getApplicationContext();
+                    INSTANCE = Room.databaseBuilder(appContext,
+                                    AppDatabase.class, "event_booking_db")
                             .fallbackToDestructiveMigration()
-                            .allowMainThreadQueries()
+                            .addCallback(new Callback() {
+                                @Override
+                                public void onCreate(@NonNull SupportSQLiteDatabase db) {
+                                    super.onCreate(db);
+                                    // Seed when database is created for the first time
+                                    seedDatabase(appContext);
+                                }
+
+                                @Override
+                                public void onDestructiveMigration(@NonNull SupportSQLiteDatabase db) {
+                                    super.onDestructiveMigration(db);
+                                    // Seed when database is recreated due to version change
+                                    seedDatabase(appContext);
+                                }
+
+                                private void seedDatabase(Context context) {
+                                    Executors.newSingleThreadExecutor().execute(() -> {
+                                        new DatabaseSeeder(context).seedAll();
+                                    });
+                                }
+                            })
                             .build();
                 }
             }

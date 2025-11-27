@@ -19,6 +19,7 @@ import androidx.lifecycle.ViewModelProvider;
 import com.bumptech.glide.Glide;
 import com.example.midterm.R;
 import com.example.midterm.model.entity.Event;
+import com.example.midterm.model.entity.Guest;
 import com.example.midterm.viewModel.EventViewModel;
 
 import java.util.List;

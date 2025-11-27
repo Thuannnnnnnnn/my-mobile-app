@@ -1,149 +1,79 @@
 package com.example.midterm.model.repository;
 
-import android.app.Application;
-import android.os.Handler;
-import android.os.Looper;
+import android.content.Context;
 
+import com.example.midterm.model.data.local.AccountDAO;
 import com.example.midterm.model.data.local.AppDatabase;
-import com.example.midterm.model.data.local.UserDAO;
-import com.example.midterm.model.entity.User;
-import com.example.midterm.viewModel.AccountViewModel; // Import interface nếu cần
+import com.example.midterm.model.data.local.OrganizerDAO;
+import com.example.midterm.model.data.local.UserProfileDAO;
+import com.example.midterm.model.entity.Account;
+import com.example.midterm.utils.HashPassword;
 
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 
 public class AccountRepository {
 
-    private final UserDAO userDAO;
-    private final ExecutorService executor;
-    private final Handler handler;
+    private final AccountDAO accountDAO;
+    private final UserProfileDAO userProfileDAO;
+    private final OrganizerDAO organizerProfileDAO;
 
-    public AccountRepository(Application application) {
-        AppDatabase db = AppDatabase.getDatabase(application);
-        this.userDAO = db.userDAO();
-        this.executor = Executors.newSingleThreadExecutor();
-        this.handler = new Handler(Looper.getMainLooper());
+    private final ExecutorService executorService;
+
+    public AccountRepository(Context context) {
+        AppDatabase db = AppDatabase.getInstance(context);
+        accountDAO = db.accountDAO();
+        userProfileDAO = db.userProfileDAO();
+        organizerProfileDAO = db.organizerDAO();
+        executorService = Executors.newSingleThreadExecutor();
     }
 
-    // ==========================================================
-    // CÁC INTERFACE CALLBACK (Để báo kết quả về ViewModel)
-    // ==========================================================
-    public interface AuthCallback {
-        void onSuccess(User user);
-        void onError(String message);
+    public void insert(Account account) {
+        executorService.execute(() -> accountDAO.insert(account));
     }
 
-    public interface ActionCallback {
-        void onSuccess(String message);
-        void onError(String message);
+    public void update(Account account) {
+        executorService.execute(() -> accountDAO.update(account));
     }
 
-    // ==========================================================
-    // 1. ĐĂNG KÝ
-    // ==========================================================
-    public void registerUser(User user, AuthCallback callback) {
-        executor.execute(() -> {
-            try {
-                // 1. Check trùng Email
-                if (userDAO.checkEmailExists(user.email) != null) {
-                    handler.post(() -> callback.onError("Email đã tồn tại!"));
-                    return;
-                }
-                // 2. Check trùng Phone (nếu có nhập)
-                if (user.phoneNumber != null && !user.phoneNumber.isEmpty()) {
-                    if (userDAO.checkPhoneExists(user.phoneNumber) != null) {
-                        handler.post(() -> callback.onError("Số điện thoại đã tồn tại!"));
-                        return;
-                    }
-                }
+    public void delete(Account account) {
+        executorService.execute(() -> accountDAO.delete(account));
+    }
 
-                // 3. Insert
-                userDAO.insertUser(user);
+    public Account login(String email, String password) {
+        String hashedPassword = HashPassword.hashPassword(password);
+        return accountDAO.login(email, hashedPassword);
+    }
+    public List<Account> getAllAccounts() {
+        return accountDAO.getAllAccounts();
+    }
+    // Đăng ký tài khoản (return true nếu đăng ký thành công)
+    public long register(Account account) {
+        int exist = accountDAO.isAccountExist(account.getEmail(), account.getPhone());
+        if (exist > 0) return -1; // Email/Phone đã tồn tại
 
-                // 4. Lấy lại user để có ID tự sinh
-                User newUser = userDAO.checkEmailExists(user.email);
-                handler.post(() -> callback.onSuccess(newUser));
-
-            } catch (Exception e) {
-                handler.post(() -> callback.onError("Lỗi đăng ký: " + e.getMessage()));
-            }
+        return accountDAO.insert(account); // Trả về ID mới tạo
+    }
+    public boolean isAccountExist(String email, String phone) {
+        return accountDAO.isAccountExist(email, phone) > 0;
+    }
+    public void checkEmailOrPhoneExist(String email, String phone, int userId, Consumer<Boolean> callback) {
+        executorService.execute(() -> {
+            boolean exist = accountDAO.countOtherAccountsWithEmailOrPhone(email, phone, userId) > 0;
+            callback.accept(exist);
         });
     }
 
-    // ==========================================================
-    // 2. ĐĂNG NHẬP
-    // ==========================================================
-    public void loginUser(String email, String password, AuthCallback callback) {
-        executor.execute(() -> {
-            try {
-                User user = userDAO.login(email, password);
-                if (user != null) {
-                    handler.post(() -> callback.onSuccess(user));
-                } else {
-                    handler.post(() -> callback.onError("Sai email hoặc mật khẩu!"));
-                }
-            } catch (Exception e) {
-                handler.post(() -> callback.onError("Lỗi đăng nhập: " + e.getMessage()));
-            }
-        });
+    public Account getAccountById(int accountId) {
+        return accountDAO.getAccountById(accountId);
     }
-
-    // ==========================================================
-    // 3. CẬP NHẬT THÔNG TIN (UPDATE)
-    // ==========================================================
-    public void updateUser(User user, ActionCallback callback) {
-        executor.execute(() -> {
-            try {
-                userDAO.updateUser(user);
-                handler.post(() -> callback.onSuccess("Cập nhật thành công!"));
-            } catch (Exception e) {
-                handler.post(() -> callback.onError("Lỗi cập nhật: " + e.getMessage()));
-            }
-        });
+    public void updateAccount(Account account) {
+        accountDAO.updateEmailAndPhone(account.getId(), account.getEmail(), account.getPhone());
     }
-
-    // ==========================================================
-    // 4. LẤY USER THEO ID (Get By ID)
-    // ==========================================================
-    public void getUserById(int userId, AuthCallback callback) {
-        executor.execute(() -> {
-            try {
-                User user = userDAO.getUserById(userId);
-                if (user != null) {
-                    handler.post(() -> callback.onSuccess(user));
-                } else {
-                    handler.post(() -> callback.onError("Không tìm thấy người dùng"));
-                }
-            } catch (Exception e) {
-                handler.post(() -> callback.onError("Lỗi tải dữ liệu: " + e.getMessage()));
-            }
-        });
-    }
-
-    // ==========================================================
-    // 5. KIỂM TRA TỒN TẠI (Check Exist) - Dùng khi sửa Profile
-    // ==========================================================
-    public void checkExist(String email, String phone, int currentUserId, AccountViewModel.CheckExistCallback callback) {
-        executor.execute(() -> {
-            boolean exists = false;
-
-            // Check Email
-            User userByEmail = userDAO.checkEmailExists(email);
-            // Nếu tìm thấy user có email này MÀ KHÔNG PHẢI là chính mình -> Trùng
-            if (userByEmail != null && userByEmail.userId != currentUserId) {
-                exists = true;
-            }
-
-            // Check Phone (Nếu chưa trùng email thì check tiếp phone)
-            if (!exists && phone != null && !phone.isEmpty()) {
-                User userByPhone = userDAO.checkPhoneExists(phone);
-                if (userByPhone != null && userByPhone.userId != currentUserId) {
-                    exists = true;
-                }
-            }
-
-            boolean finalExists = exists;
-            handler.post(() -> callback.onResult(finalExists));
-        });
+    //Update role
+    public void updateRole(int accountId, String role) {
+        executorService.execute(() -> accountDAO.updateRole(accountId, role));
     }
 }
