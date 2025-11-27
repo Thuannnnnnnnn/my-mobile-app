@@ -24,7 +24,6 @@ import com.example.midterm.view.NotificationSettingsActivity;
 import com.example.midterm.view.ThemeSettingsActivity;
 import com.example.midterm.view.ChangePasswordActivity;
 import com.example.midterm.viewModel.AccountViewModel;
-import com.example.midterm.viewModel.OrganizerViewModel;
 
 import java.io.File;
 

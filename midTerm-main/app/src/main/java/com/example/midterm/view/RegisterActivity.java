@@ -9,6 +9,8 @@ import android.util.Patterns;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
@@ -26,10 +28,13 @@ import com.google.android.material.textfield.TextInputEditText;
 
 public class RegisterActivity extends AppCompatActivity {
 
-    private TextInputEditText etUsername, etPassword, etConfirmPassword;
+    private TextInputEditText etUsername, etPassword, etConfirmPassword; // Removed etEmail, etPhone, etName
     private TextView tvErrorUsername, tvErrorPassword, tvErrorConfirmPassword, tvLoginNow;
     private Button btnRegister;
     private ImageButton btnBack;
+    private RadioGroup radioGroupRole;
+    private RadioButton rbAttendee, rbOrganizer;
+
     private AccountViewModel accountViewModel;
 
     @Override
@@ -52,6 +57,8 @@ public class RegisterActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+
+        setupViewModelObservers();
     }
 
     private void initViews() {
@@ -64,27 +71,57 @@ public class RegisterActivity extends AppCompatActivity {
         tvLoginNow = findViewById(R.id.tv_login_now);
         btnRegister = findViewById(R.id.btn_register);
         btnBack = findViewById(R.id.btn_back);
+        radioGroupRole = findViewById(R.id.radioGroupRole);
+        rbAttendee = findViewById(R.id.rbAttendee);
+        rbOrganizer = findViewById(R.id.rbOrganizer);
     }
 
     private void handleRegister() {
-        String username = etUsername.getText().toString().trim();
+        String inputIdentifier = etUsername.getText().toString().trim(); // This can be email or phone
         String password = etPassword.getText().toString().trim();
-        String hashedPassword = HashPassword.hashPassword(password);
         String confirm = etConfirmPassword.getText().toString().trim();
 
-        boolean valid = validateUsername(username) &
-                validatePassword(password) &
-                validateConfirmPassword(password, confirm);
+        // Placeholder for fullName and actual phoneNumber/email from inputIdentifier
+        String fullName = ""; // Needs UI input field if required
+        String email = "";
+        String phoneNumber = "";
+
+        if (isValidEmail(inputIdentifier)) {
+            email = inputIdentifier;
+        } else if (isValidPhone(inputIdentifier)) {
+            phoneNumber = inputIdentifier;
+        }
+
+        boolean valid = validateUsername(inputIdentifier) &&
+                        validatePassword(password) &&
+                        validateConfirmPassword(password, confirm);
 
         if (!valid) return;
 
         btnRegister.setEnabled(false);
-        String role = "user";
-        accountViewModel.register(username, hashedPassword, role);
+        int selectedRoleId = radioGroupRole.getCheckedRadioButtonId();
+        String role;
+        if (selectedRoleId == R.id.rbOrganizer) {
+            role = "Organizer";
+        } else {
+            role = "Attendee"; // Default or if rbAttendee is checked
+        }
 
-        accountViewModel.registerResult.observe(this, success -> {
-            btnRegister.setEnabled(true);
-            if (success) {
+        String hashedPassword = HashPassword.hashPassword(password);
+
+        // Call ViewModel with updated signature
+        // Note: fullName is an empty string currently as it is not in UI
+        accountViewModel.register(email, hashedPassword, fullName, phoneNumber, role);
+    }
+
+    private void setupViewModelObservers() {
+        accountViewModel.getIsLoading().observe(this, isLoading -> {
+            btnRegister.setEnabled(!isLoading);
+            // Optionally show/hide a progress bar
+        });
+
+        accountViewModel.getUser().observe(this, user -> {
+            if (user != null) {
                 Snackbar.make(btnRegister, "Đăng ký thành công!", Snackbar.LENGTH_SHORT)
                         .setBackgroundTint(Color.parseColor("#4CAF50"))
                         .setTextColor(Color.WHITE)
@@ -92,9 +129,13 @@ public class RegisterActivity extends AppCompatActivity {
                 Intent intent = new Intent(RegisterActivity.this, MainActivity.class);
                 startActivity(intent);
                 finish();
-            } else {
-                Snackbar.make(btnRegister, "Email hoặc SĐT đã tồn tại!", Snackbar.LENGTH_LONG).
-                        setBackgroundTint(Color.parseColor("#ED2A2A"))
+            }
+        });
+
+        accountViewModel.getError().observe(this, message -> {
+            if (message != null && !message.isEmpty()) {
+                Snackbar.make(btnRegister, message, Snackbar.LENGTH_LONG)
+                        .setBackgroundTint(Color.parseColor("#ED2A2A"))
                         .show();
             }
         });

@@ -21,8 +21,6 @@ import androidx.lifecycle.ViewModelProvider;
 import com.example.midterm.R;
 import com.example.midterm.model.entity.Discount;
 import com.example.midterm.model.entity.Event;
-import com.example.midterm.model.repository.DiscountRepository;
-import com.example.midterm.viewModel.DiscountViewModel;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.android.material.textfield.TextInputEditText;
 

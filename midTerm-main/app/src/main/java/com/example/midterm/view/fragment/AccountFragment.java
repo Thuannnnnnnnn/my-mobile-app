@@ -6,7 +6,6 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -21,7 +20,6 @@ import com.example.midterm.view.AccountInfoActivity;
 import com.example.midterm.view.MainActivity;
 import com.example.midterm.view.RegisterOrganizer;
 import com.example.midterm.viewModel.AccountViewModel;
-import com.example.midterm.viewModel.UserProfileViewModel;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 

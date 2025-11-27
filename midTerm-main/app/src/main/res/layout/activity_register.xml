@@ -145,6 +145,33 @@
                 app:layout_constraintStart_toStartOf="@+id/input_confirm_password"
                 app:layout_constraintTop_toBottomOf="@+id/input_confirm_password" />
 
+            <!-- RadioGroup cho vai trò -->
+            <RadioGroup
+                android:id="@+id/radioGroupRole"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginTop="16dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvErrorConfirmPassword">
+
+                <RadioButton
+                    android:id="@+id/rbAttendee"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Khách tham dự"
+                    android:checked="true" />
+
+                <RadioButton
+                    android:id="@+id/rbOrganizer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Nhà tổ chức"
+                    android:layout_marginStart="20dp"/>
+            </RadioGroup>
+
             <Button
                 android:id="@+id/btn_register"
                 android:layout_width="match_parent"
@@ -158,7 +185,7 @@
                 android:textSize="16sp"
                 android:textStyle="bold"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/input_confirm_password" />
+                app:layout_constraintTop_toBottomOf="@id/radioGroupRole" /> <!-- Updated constraint -->
 
             <LinearLayout
                 android:id="@+id/layout_login_now"

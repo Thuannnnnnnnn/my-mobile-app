@@ -24,7 +24,7 @@
         app:layout_constraintBottom_toBottomOf="parent" />
 
     <TextView
-        android:id="@+id/tv_guest_name"
+        android:id="@+id/tvGuestName"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
@@ -52,7 +52,7 @@
         android:maxLines="1"
         android:ellipsize="end"
         app:layout_constraintStart_toEndOf="@id/icon_guest_indicator"
-        app:layout_constraintTop_toBottomOf="@id/tv_guest_name"
+        app:layout_constraintTop_toBottomOf="@id/tvGuestName"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@id/icon_edit_guest" />
 
@@ -93,7 +93,7 @@
         android:layout_height="1dp"
         android:background="#E0E0E0"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="@id/tv_guest_name"
+        app:layout_constraintStart_toStartOf="@id/tvGuestName"
         app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

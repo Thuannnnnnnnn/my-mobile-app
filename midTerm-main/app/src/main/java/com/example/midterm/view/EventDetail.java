@@ -29,10 +29,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.example.midterm.R;
 import com.example.midterm.model.entity.Event;
-import com.example.midterm.model.entity.Guest;
 import com.example.midterm.model.entity.TicketType;
 
-import com.example.midterm.view.Adapter.GuestDetailAdapter;
 import com.example.midterm.view.Adapter.ReviewAdapter;
 import com.example.midterm.view.Adapter.TicketDetailAdapter;
 import com.example.midterm.viewModel.EventViewModel;
